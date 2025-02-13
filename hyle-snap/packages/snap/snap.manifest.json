@@ -4,15 +4,15 @@
   "proposedName": "Hyle",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/template-snap-monorepo.git"
+    "url": "https://github.com/Hyle-org/metamask-id.git"
   },
   "source": {
-    "shasum": "Hl6rG/aUiyP7n0vbqP6KIwYTw5Uyd2TXJFQnBAt3bhU=",
+    "shasum": "yabH7ApYNEWE8fgjcy7ViS1xox50Qn8ER3KsmsG+qfk=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
         "iconPath": "img/hyle_logo.svg",
-        "packageName": "snap",
+        "packageName": "hyle-snap",
         "registry": "https://registry.npmjs.org/"
       }
     }
