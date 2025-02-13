@@ -1,3 +1,0 @@
-# Metamask identity contract & snap
-
-
