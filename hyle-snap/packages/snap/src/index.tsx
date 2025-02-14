@@ -10,7 +10,7 @@ import { UserInputEventType } from '@metamask/snaps-sdk';
 import { Box, Heading, Text, Divider, Button } from '@metamask/snaps-sdk/jsx';
 
 import { Blob, BlobTransaction, contract_name, getIdentity, HYLE_NODE_URL, registerIdentity, transfer } from './hyle';
-import { deserializeERC20Action, deserializeIdentityAction, ERC20Action } from './model';
+import { AmmAction, deserializeAmmAction, deserializeERC20Action, deserializeIdentityAction, ERC20Action } from './model';
 
 async function getAccount() {
   // Retrieve stored account
@@ -230,6 +230,11 @@ export const onSignature: OnSignatureHandler = async ({
           const action = deserializeERC20Action(blob);
           return erc20ActionToInsight(action.parameters);
         }
+      case "amm":
+        {
+          const action = deserializeAmmAction(blob);
+          return ammActionToInsight(action.parameters);
+        }
       default:
         return (<Text key="unknown">Unknown contract {blob.contract_name} </Text>);
     }
@@ -291,15 +296,24 @@ export const erc20ActionToInsight = (action: ERC20Action): string => {
   if ("TotalSupply" in action) {
     return "TotalSupply";
   } else if ("BalanceOf" in action) {
-    return `BalanceOf { account: ${action.BalanceOf.account} }`;
+    return `BalanceOf account ${action.BalanceOf.account}`;
   } else if ("Transfer" in action) {
-    return `Transfer { recipient: ${action.Transfer.recipient}, amount: ${action.Transfer.amount} }`;
+    return `Transfer ${action.Transfer.amount} to ${action.Transfer.recipient}`;
   } else if ("TransferFrom" in action) {
-    return `TransferFrom { sender: ${action.TransferFrom.sender}, recipient: ${action.TransferFrom.recipient}, amount: ${action.TransferFrom.amount} }`;
+    return `TransferFrom from ${action.TransferFrom.sender} to ${action.TransferFrom.recipient} amount: ${action.TransferFrom.amount}`;
   } else if ("Approve" in action) {
-    return `Approve { spender: ${action.Approve.spender}, amount: ${action.Approve.amount} }`
+    return `Approve spender: ${action.Approve.spender}, amount: ${action.Approve.amount}`
   } else if ("Allowance" in action) {
-    return `Allowance { owner: ${action.Allowance.owner}, spender: ${action.Allowance.spender} }`;
+    return `Allowance owner: ${action.Allowance.owner}, spender: ${action.Allowance.spender}`;
   }
   return "Unknown ERC20Action"
+};
+
+export const ammActionToInsight = (action: AmmAction): string => {
+  if ("Swap" in action) {
+    return `Swap ${action.Swap.amounts[0]} ${action.Swap.pair[0]} -> ${action.Swap.amounts[1]} ${action.Swap.pair[1]}`;
+  } else if ("NewPair" in action) {
+    return `NewPair ${action.NewPair.amounts[0]} ${action.NewPair.pair[0]} <-> ${action.NewPair.amounts[1]} ${action.NewPair.pair[1]}`;
+  }
+  return "Unknown AmmAction"
 };

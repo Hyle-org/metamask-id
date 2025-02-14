@@ -44,18 +44,27 @@ const schema = BorshSchema.Enum({
 //    pub callees: Option<Vec<BlobIndex>>,
 //    pub parameters: Parameters,
 //}
+export type BlobIndex = {
+  0: number;
+};
+
+export const blobIndexSchema = BorshSchema.Struct({
+  0: BorshSchema.u32,
+});
+
 export type StructuredBlobData<Parameters> = {
-  caller: number | null;
-  callees: number[] | null;
+  caller: BlobIndex | null;
+  callees: BlobIndex[] | null;
   parameters: Parameters;
 };
 
-const structuredBlobDataSchema = (schema: BorshSchema) =>
+export const structuredBlobDataSchema = (schema: BorshSchema) =>
   BorshSchema.Struct({
-    caller: BorshSchema.Option(BorshSchema.u32),
-    callees: BorshSchema.Option(BorshSchema.Vec(BorshSchema.u32)),
+    caller: BorshSchema.Option(blobIndexSchema),
+    callees: BorshSchema.Option(BorshSchema.Vec(blobIndexSchema)),
     parameters: schema,
   });
+
 
 export type ERC20Action =
   | { TotalSupply: {} }
@@ -126,3 +135,80 @@ const erc20Schema = BorshSchema.Enum({
   }),
 });
 
+// pub enum AmmAction {
+//    Swap {
+//        pair: TokenPair, // User swaps the first token of the pair for the second token
+//        amounts: TokenPairAmount,
+//    },
+//    NewPair {
+//        pair: TokenPair,
+//        amounts: TokenPairAmount,
+//    },
+//}
+//
+// type TokenPair = (String, String);
+// type TokenPairAmount = (u128, u128);
+
+export type TokenPair = [string, string];
+export type TokenPairAmount = [number, number];
+
+export type AmmAction =
+  | {
+    Swap: {
+      pair: TokenPair;
+      amounts: TokenPairAmount;
+    };
+  }
+  | {
+    NewPair: {
+      pair: TokenPair;
+      amounts: TokenPairAmount;
+    };
+  };
+
+const ammSchema = BorshSchema.Enum({
+  Swap: BorshSchema.Struct({
+    pair: BorshSchema.Struct({ 0: BorshSchema.String, 1: BorshSchema.String }),
+    amounts: BorshSchema.Struct({ 0: BorshSchema.u128, 1: BorshSchema.u128 }),
+  }),
+  NewPair: BorshSchema.Struct({
+    pair: BorshSchema.Struct({ 0: BorshSchema.String, 1: BorshSchema.String }),
+    amounts: BorshSchema.Struct({ 0: BorshSchema.u128, 1: BorshSchema.u128 }),
+  }),
+});
+
+export const buildSwapBlob = (
+  token_a: ContractName,
+  token_b: ContractName,
+  amount_a: number,
+  amount_b: number,
+  callees: number[] | null,
+): Blob => {
+  const action: AmmAction = {
+    Swap: { pair: [token_a, token_b], amounts: [amount_a, amount_b] },
+  };
+
+  const structured: StructuredBlobData<AmmAction> = {
+    caller: null,
+    callees,
+    parameters: action,
+  };
+
+  const blob: Blob = {
+    contract_name: "amm",
+    data: serializeAmmAction(structured),
+  };
+  return blob;
+};
+
+export const serializeAmmAction = (
+  action: StructuredBlobData<AmmAction>,
+): number[] => {
+  return Array.from(
+    borshSerialize(structuredBlobDataSchema(ammSchema), action),
+  );
+};
+
+export const deserializeAmmAction = (blob: Blob): StructuredBlobData<AmmAction> => {
+  return borshDeserialize(structuredBlobDataSchema(ammSchema), Buffer.from(blob.data));
+};

@@ -573,6 +573,7 @@ dependencies = [
  "axum",
  "bincode",
  "bonsai-sdk",
+ "borsh",
  "bytemuck",
  "hex",
  "risc0-zkvm",
