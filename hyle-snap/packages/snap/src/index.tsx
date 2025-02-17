@@ -1,18 +1,17 @@
 import {
-  OnUserInputHandler,
   OnHomePageHandler,
   OnInstallHandler,
   OnSignatureHandler,
   OnRpcRequestHandler,
   SeverityLevel,
+  MethodNotFoundError,
 } from '@metamask/snaps-sdk';
-import { UserInputEventType } from '@metamask/snaps-sdk';
-import { Box, Heading, Text, Divider, Button } from '@metamask/snaps-sdk/jsx';
+import { Box, Heading, Text, Divider } from '@metamask/snaps-sdk/jsx';
 
-import { Blob, BlobTransaction, contract_name, getIdentity, HYLE_NODE_URL, registerIdentity, transfer } from './hyle';
-import { AmmAction, deserializeAmmAction, deserializeERC20Action, deserializeIdentityAction, ERC20Action } from './model';
+import { Blob, contract_name, HYLE_NODE_URL } from './hyle';
+import { AmmAction, deserializeAmmAction, deserializeERC20Action, ERC20Action } from './model';
 
-async function getAccount() {
+async function getAccount(): Promise<{ account: string, nonce: number }> {
   // Retrieve stored account
   let state = await snap.request({
     method: 'snap_manageState',
@@ -21,11 +20,11 @@ async function getAccount() {
 
   // If no stored account, request from MetaMask
   if (!state || !state.account) {
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' }) as string[];
 
     // If accounts exist, store the first one
     if (accounts.length > 0) {
-      state = { account: accounts[0] };
+      state = { account: `${accounts[0]}.${contract_name}`, nonce: 0 };
 
       // Save account in Snap state
       await snap.request({
@@ -33,43 +32,61 @@ async function getAccount() {
         params: { operation: 'update', newState: state },
       });
     } else {
-      state = { account: 'No account found' };
+      state = { account: 'No account found', nonce: 0 };
     }
   }
 
-  return state.account;
+  return { account: state.account as string, nonce: state.nonce as number };
 }
-//
+
+async function bumpNonce() {
+  const { account, nonce } = await getAccount();
+  await snap.request({
+    method: 'snap_manageState',
+    params: { operation: 'update', newState: { account, nonce: nonce + 1 } },
+  });
+}
+
+async function setNonce(nonce: number) {
+  const { account } = await getAccount();
+  await snap.request({
+    method: 'snap_manageState',
+    params: { operation: 'update', newState: { account, nonce } },
+  });
+}
+
 //// Sign message using personal_sign
-//async function signMessage(message: string) {
-//  const hexMessage = toHexMessage(message); // Convert message to hex
-//  console.log(hexMessage);
-//  const ethAddr = await ethereum.request({
-//    method: 'eth_requestAccounts',
-//  });
-//  console.log("account", ethAddr[0], hexMessage);
-//
-//  try {
-//    const signature = await ethereum.request<string>({
-//      method: 'personal_sign',
-//      params: [hexMessage, ethAddr[0]],
-//    });
-//    console.log("signed");
-//
-//    console.log("signature", signature, hexMessage);
-//    return signature;
-//  } catch (error) {
-//    console.log("error in signature", error);
-//    await snap.request({
-//      method: 'snap_notify',
-//      params: {
-//        type: 'inApp',
-//        message: `Signing failed: ${error.message} with account ${account} and message ${message}`,
-//      },
-//    });
-//    return 'Signing failed';
-//  }
-//}
+async function signBlobs(blobs: Array<Blob>) {
+  const { account, nonce } = await getAccount();
+
+  const message = `verify ${nonce} ${blobs.map((blob) => blob.contract_name + " [" + blob.data.join(", ") + "]").join(" ")}`;
+
+  const hexMessage = toHexMessage(message); // Convert message to hex
+
+  const ethAddr = await ethereum.request({
+    method: 'eth_requestAccounts',
+  });
+
+  //try {
+  const signature = await ethereum.request<string>({
+    method: 'personal_sign',
+    params: [hexMessage, ethAddr[0]],
+  });
+
+  await bumpNonce(); // Increment nonce after successful signing
+
+  return { account, signature, nonce };
+  //} catch (error) {
+  //  await snap.request({
+  //    method: 'snap_notify',
+  //    params: {
+  //      type: 'inApp',
+  //      message: `Signing failed: ${error.message} with account ${account} and message ${message}`,
+  //    },
+  //  });
+  //  return 'Signing failed';
+  //}
+}
 
 // Convert message to hex format
 function toHexMessage(message: string): string {
@@ -82,63 +99,40 @@ function fromHexMessage(hexMessage: string): string {
   }
   return Buffer.from(hexMessage, 'hex').toString('utf8').replace(/\0/g, '');
 }
-//
-//export const onRpcRequest: OnRpcRequestHandler = async ({
-//  origin,
-//  request,
-//}) => {
-//  console.log('RPC request', request);
-//  switch (request.method) {
-//    case "get_account":
-//      return await getIdentity();
-//    case "register_account":
-//      {
-//        console.log("register_account");
-//        const signature = await signMessage("hyle registration");
-//        console.log("ouch", signature);
-//        const generatedProof = await registerIdentity(signature);
-//
-//        //await snap.request({
-//        //  method: 'snap_dialog',
-//        //  params: {
-//        //    type: 'alert',
-//        //    content: (
-//        //      <Box>
-//        //        <Text>Registration Completed !</Text>
-//        //        <Divider />
-//        //        <Text>generatedProof tx:</Text>
-//        //        <Text>{generatedProof}</Text>
-//        //      </Box>
-//        //    ),
-//        //  },
-//        //});
-//      }
-//      return "done!"
-//
-//    default:
-//      throw new Error("Method not found.")
-//  }
-//}
-//
-//// Store account on Snap install
-//export const onInstall: OnInstallHandler = async () => {
-//  const account = await getAccount();
-//  await snap.request({
-//    method: 'snap_dialog',
-//    params: {
-//      type: 'alert',
-//      content: (
-//        <Box>
-//          <Text>Connected Account: {account}</Text>
-//        </Box>
-//      ),
-//    },
-//  });
-//};
+
+export const onRpcRequest: OnRpcRequestHandler = async ({
+  request,
+}) => {
+  switch (request.method) {
+    case "get_account":
+      return await getAccount();
+    case "sign_blobs":
+      return await signBlobs(request.params?.blobs);
+    default:
+      throw new MethodNotFoundError()
+  }
+}
+
+// Store account on Snap install
+export const onInstall: OnInstallHandler = async () => {
+  const { account } = await getAccount();
+  const address = account.replace(`.${contract_name}`, "");
+  try {
+    const response = await fetch(`${HYLE_NODE_URL}/v1/indexer/contract/${contract_name}/nonce/${address}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const info = await response.json();
+    await setNonce(info.nonce);
+
+  } catch (error) {
+  }
+};
 
 // Use stored account in Home Page
 export const onHomePage: OnHomePageHandler = async () => {
-  const account = `${await getAccount()}.${contract_name}`;
+  const { account, nonce } = await getAccount();
   let balances = new Map<string, number>();
   try {
     const response = await fetch(`${HYLE_NODE_URL}/v1/indexer/contract/hyllar/state`, {
@@ -163,12 +157,11 @@ export const onHomePage: OnHomePageHandler = async () => {
   } catch (error) {
   }
 
-  console.log("balances", balances);
-
   return {
     content: (
       <Box>
         <Text>Account: {account}</Text>
+        <Text>Nonce: {nonce.toString()}</Text>
         <Text>Balances:</Text>
         {Array.from(balances).map(([key, value]) => (
           <Text key={key}>
@@ -181,34 +174,6 @@ export const onHomePage: OnHomePageHandler = async () => {
   };
 };
 
-//// Handle user actions
-//export const onUserInput: OnUserInputHandler = async ({ id, event }) => {
-//  if (event.type === UserInputEventType.ButtonClickEvent) {
-//    switch (event.name) {
-//      case 'register-button': {
-//        const signature = await signMessage();
-//        const generatedProof = await registerIdentity(signature);
-//
-//        await snap.request({
-//          method: 'snap_dialog',
-//          params: {
-//            type: 'alert',
-//            content: (
-//              <Box>
-//                <Text>Registration Completed !</Text>
-//                <Divider />
-//                <Text>generatedProof tx:</Text>
-//                <Text>{generatedProof}</Text>
-//              </Box>
-//            ),
-//          },
-//        });
-//        break;
-//      }
-//    }
-//  }
-//};
-
 export const onSignature: OnSignatureHandler = async ({
   signature,
 }) => {
@@ -219,45 +184,51 @@ export const onSignature: OnSignatureHandler = async ({
     };
   }
 
-  const { blobs, nonce } = parseMessage(fromHexMessage(signature.data));
+  try {
+    const { blobs, nonce } = parseMessage(fromHexMessage(signature.data));
 
-  const renderInsight = (blob: Blob) => {
-    console.log("render", blob);
-    switch (blob.contract_name) {
-      case "hyllar":
-      case "hyllar2":
-        {
-          const action = deserializeERC20Action(blob);
-          return erc20ActionToInsight(action.parameters);
-        }
-      case "amm":
-        {
-          const action = deserializeAmmAction(blob);
-          return ammActionToInsight(action.parameters);
-        }
-      default:
-        return (<Text key="unknown">Unknown contract {blob.contract_name} </Text>);
+    const renderInsight = (blob: Blob) => {
+      switch (blob.contract_name) {
+        case "hyllar":
+        case "hyllar2":
+          {
+            const action = deserializeERC20Action(blob);
+            return erc20ActionToInsight(action.parameters);
+          }
+        case "amm":
+          {
+            const action = deserializeAmmAction(blob);
+            return ammActionToInsight(action.parameters);
+          }
+        default:
+          return (<Text key="unknown">Unknown contract {blob.contract_name} </Text>);
+      }
     }
-  }
 
-  return {
-    content: (
-      <Box>
-        <Heading>Signature Data:</Heading>
-        <Text>Nonce: {nonce.toString()}</Text>
-        {blobs.map((blob, index) => (
-          <Box key={`${blob.contract_name}-${index}`} >
-            <Divider />
-            <Heading>Blob #{index.toString()}:</Heading>
-            <Text>Contract: {blob.contract_name}</Text>
-            <Text>Data: {renderInsight(blob)}</Text>
-          </Box>
-        ))
-        }
-      </Box >
-    ),
-    severity: SeverityLevel.Critical,
-  };
+    return {
+      content: (
+        <Box>
+          <Heading>Signature Data:</Heading>
+          <Text>Nonce: {nonce.toString()}</Text>
+          {blobs.map((blob, index) => (
+            <Box key={`${blob.contract_name}-${index}`} >
+              <Divider />
+              <Heading>Blob #{index.toString()}:</Heading>
+              <Text>Contract: {blob.contract_name}</Text>
+              <Text>Data: {renderInsight(blob)}</Text>
+            </Box>
+          ))
+          }
+        </Box >
+      ),
+      severity: SeverityLevel.Critical,
+    };
+  } catch (error) {
+    return {
+      content: <Text>Invalid signature data: {error.message}</Text>,
+      severity: SeverityLevel.Critical,
+    };
+  }
 };
 
 function parseMessage(message: string): { blobs: Blob[], nonce: number } {

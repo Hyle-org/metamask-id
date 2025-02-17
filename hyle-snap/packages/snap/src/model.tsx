@@ -49,7 +49,7 @@ export type BlobIndex = {
 };
 
 export const blobIndexSchema = BorshSchema.Struct({
-  0: BorshSchema.u32,
+  0: BorshSchema.u64,
 });
 
 export type StructuredBlobData<Parameters> = {
