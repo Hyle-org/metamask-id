@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 #[cfg(feature = "client")]
 pub mod client;
 
-mod actions;
+pub mod actions;
 
 extern crate alloc;
 
@@ -23,7 +23,11 @@ pub fn execute(contract_input: sdk::ContractInput) -> RunResult<IdentityContract
     let action = action.ok_or("Failed to parse action")?;
 
     // Parse initial state
-    let state: IdentityContractState = input.initial_state.clone().try_into()?;
+    let state: IdentityContractState = input
+        .initial_state
+        .clone()
+        .try_into()
+        .expect("failed to parse state");
 
     let identity = input.identity;
     let contract_name = &input
@@ -75,7 +79,7 @@ impl IdentityContractState {
     }
 }
 
-fn execute_action(
+pub fn execute_action(
     mut state: IdentityContractState,
     action: IdentityAction,
     contract_name: &sdk::ContractName,
@@ -152,7 +156,7 @@ impl IdentityContractState {
     ) -> Result<bool, String> {
         match self.identities.get_mut(pub_key) {
             Some(stored_info) => {
-                if nonce != stored_info.nonce {
+                if nonce < stored_info.nonce {
                     return Err("Invalid nonce".to_string());
                 }
                 // Compute Keccak256 hash of the account (to match register_identity)
@@ -178,7 +182,7 @@ impl IdentityContractState {
                     return Err(format!("Invalid signature for message {message}"));
                 }
 
-                stored_info.nonce += 1;
+                stored_info.nonce = nonce + 1;
                 Ok(true)
             }
             None => Err("Identity not found".to_string()),
@@ -186,7 +190,7 @@ impl IdentityContractState {
     }
 
     #[allow(dead_code)]
-    fn get_identity_info(&self, account: &str) -> Result<AccountInfo, &'static str> {
+    pub fn get_identity_info(&self, account: &str) -> Result<AccountInfo, &'static str> {
         self.identities
             .get(account)
             .cloned()
@@ -210,10 +214,11 @@ impl Digestable for IdentityContractState {
 }
 
 impl TryFrom<sdk::StateDigest> for IdentityContractState {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(state: sdk::StateDigest) -> Result<Self, Self::Error> {
-        borsh::from_slice(&state.0).map_err(|_| "Could not decode identity state".to_string())
+        borsh::from_slice(&state.0)
+            .map_err(|_| anyhow::anyhow!("Could not decode identity state".to_string()))
     }
 }
 
