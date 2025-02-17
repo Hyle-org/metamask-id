@@ -10,6 +10,8 @@ use std::collections::BTreeMap;
 
 #[cfg(feature = "client")]
 pub mod client;
+#[cfg(feature = "client")]
+pub mod indexer;
 
 pub mod actions;
 

@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use client_sdk::{
-    helpers::{risc0::Risc0Prover, ClientSdkExecutor, ClientSdkProver},
+    helpers::{ClientSdkExecutor, ClientSdkProver},
     transaction_builder::{StateUpdater, TxExecutorBuilder},
 };
 use sdk::{utils::as_hyle_output, ContractName, Digestable, HyleOutput};
@@ -12,7 +12,6 @@ pub mod metadata {
     pub const ELF: &[u8] = methods_identity::GUEST_ELF;
     //pub const PROGRAM_ID: [u8; 32] = methods_identity::GUEST_ID;
 }
-use metadata::*;
 
 pub struct PseudoExecutor {}
 impl ClientSdkExecutor for PseudoExecutor {
@@ -49,7 +48,7 @@ struct NoProver {}
 impl ClientSdkProver for NoProver {
     fn prove(
         &self,
-        contract_input: sdk::ContractInput,
+        _contract_input: sdk::ContractInput,
     ) -> std::pin::Pin<
         Box<dyn std::future::Future<Output = anyhow::Result<sdk::ProofData>> + Send + '_>,
     > {
