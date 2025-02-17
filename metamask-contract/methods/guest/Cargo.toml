@@ -6,8 +6,8 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-# sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", features = ["risc0"], branch = "main" }
-sdk = { path = "/home/bertrand/workspace/hyle2/crates/contract-sdk", features = ["risc0"], package = "hyle-contract-sdk" }
+sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", features = ["risc0"], branch = "metamask" }
+# sdk = { path = "/home/bertrand/workspace/hyle2/crates/contract-sdk", features = ["risc0"], package = "hyle-contract-sdk" }
 contract-identity = { path = "../../contract", default-features = false}
 
 risc0-zkvm = { version = "1.2.2", default-features = false, features = ['std'] }
