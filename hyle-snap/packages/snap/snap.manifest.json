@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hyle identity registration",
   "proposedName": "Hyle",
   "repository": {
@@ -7,7 +7,7 @@
     "url": "https://github.com/Hyle-org/metamask-id.git"
   },
   "source": {
-    "shasum": "6SeKTqGZxolBtagk04jRDbHKOGZfkNT2umME6R3wDAA=",
+    "shasum": "BklVX2P/Ykytok8RCkYef85M4mgkhTRXsJpMe9XbUzs=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
