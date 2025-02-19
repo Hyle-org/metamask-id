@@ -8,7 +8,7 @@ import {
 } from '@metamask/snaps-sdk';
 import { Box, Heading, Text, Divider } from '@metamask/snaps-sdk/jsx';
 
-import { Blob, contract_name, HYLE_NODE_URL } from './hyle';
+import { Blob, contract_name, HYLE_NODE_URL, HYLE_PROVER_URL } from './hyle';
 import { AmmAction, deserializeAmmAction, deserializeERC20Action, ERC20Action } from './model';
 
 async function getAccount(): Promise<{ account: string, nonce: number }> {
@@ -118,7 +118,7 @@ export const onInstall: OnInstallHandler = async () => {
   const { account } = await getAccount();
   const address = account.replace(`.${contract_name}`, "");
   try {
-    const response = await fetch(`${HYLE_NODE_URL}/v1/indexer/contract/${contract_name}/nonce/${address}`, {
+    const response = await fetch(`${HYLE_PROVER_URL}/v1/indexer/contract/${contract_name}/nonce/${address}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });

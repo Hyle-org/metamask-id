@@ -4,7 +4,7 @@ use client_sdk::contract_indexer::{
     axum::Router,
     utoipa::openapi::OpenApi,
     utoipa_axum::{router::OpenApiRouter, routes},
-    ContractHandler, RwLock, Store,
+    ContractHandler, ContractHandlerStore,
 };
 use client_sdk::contract_indexer::{
     axum::{
@@ -18,11 +18,10 @@ use client_sdk::contract_indexer::{
 };
 use sdk::{tracing::info, Blob, BlobIndex, BlobTransaction, Identity};
 use serde::Serialize;
-use std::sync::Arc;
 
 use client_sdk::contract_indexer::axum;
 impl ContractHandler for IdentityContractState {
-    async fn api(store: Arc<RwLock<Store<Self>>>) -> (Router<()>, OpenApi) {
+    async fn api(store: ContractHandlerStore<Self>) -> (Router<()>, OpenApi) {
         let (router, api) = OpenApiRouter::default()
             .routes(routes!(get_state))
             .routes(routes!(get_nonce))
@@ -61,7 +60,7 @@ impl ContractHandler for IdentityContractState {
     )
 )]
 pub async fn get_state(
-    State(state): State<Arc<RwLock<Store<IdentityContractState>>>>,
+    State(state): State<ContractHandlerStore<IdentityContractState>>,
 ) -> Result<impl IntoResponse, AppError> {
     let store = state.read().await;
     store.state.clone().map(Json).ok_or(AppError(
@@ -89,7 +88,7 @@ struct NonceResponse {
 )]
 pub async fn get_nonce(
     Path(account): Path<Identity>,
-    State(state): State<Arc<RwLock<Store<IdentityContractState>>>>,
+    State(state): State<ContractHandlerStore<IdentityContractState>>,
 ) -> Result<impl IntoResponse, AppError> {
     let store = state.read().await;
     let state = store.state.clone().ok_or(AppError(

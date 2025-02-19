@@ -54,7 +54,7 @@ export interface ProofTransaction {
 
 export const contract_name: Identity = 'mmid';
 export const HYLE_NODE_URL = 'http://localhost:4321';
-const HYLE_PROVER_URL = 'http://localhost:4000';
+export const HYLE_PROVER_URL = 'http://localhost:4000';
 
 export async function getIdentity(): Promise<string> {
   const ethAddr = await ethereum.request({

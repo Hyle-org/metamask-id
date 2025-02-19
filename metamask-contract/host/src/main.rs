@@ -5,7 +5,7 @@ use contract_identity::IdentityContractState;
 use hex::decode;
 use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 use sdk::api::APIRegisterContract;
-use sdk::{BlobTransaction, TxHash};
+use sdk::TxHash;
 use sdk::{ContractInput, Digestable};
 use sdk::{Identity, ProofTransaction};
 use serde::Deserialize;
@@ -62,8 +62,6 @@ async fn main() {
     let client = client_sdk::rest_client::NodeApiHttpClient::new(cli.host).unwrap();
 
     let contract_name = &cli.contract_name;
-
-    let prover = Risc0Prover::new(GUEST_ELF);
 
     match cli.command {
         Commands::RegisterContract {} => {
