@@ -10,7 +10,6 @@ use crate::{execute, IdentityContractState};
 
 pub mod metadata {
     pub const ELF: &[u8] = methods_identity::GUEST_ELF;
-    pub const PROGRAM_ID: [u8; 32] = methods_identity::GUEST_ID;
 }
 
 pub struct PseudoExecutor {}
