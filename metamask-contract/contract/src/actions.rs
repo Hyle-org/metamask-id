@@ -8,7 +8,7 @@ extern crate alloc;
 #[derive(Serialize, Deserialize, BorshSerialize, BorshDeserialize, Debug, Clone)]
 pub enum IdentityAction {
     RegisterIdentity { signature: String },
-    VerifyIdentity { nonce: u32, signature: String },
+    VerifyIdentity { nonce: u128, signature: String },
 }
 
 impl IdentityAction {

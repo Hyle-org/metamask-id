@@ -152,7 +152,7 @@ impl IdentityContractState {
     fn verify_identity(
         &mut self,
         pub_key: &str,
-        nonce: u32,
+        nonce: u128,
         blobs: &[sdk::Blob],
         signature: &str,
     ) -> Result<bool, String> {
