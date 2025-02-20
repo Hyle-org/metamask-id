@@ -72,7 +72,7 @@ pub async fn get_state(
 #[derive(Serialize, ToSchema)]
 struct NonceResponse {
     account: String,
-    nonce: u32,
+    nonce: u128,
 }
 
 #[utoipa::path(

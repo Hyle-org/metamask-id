@@ -58,7 +58,7 @@ pub fn execute(contract_input: sdk::ContractInput) -> RunResult<IdentityContract
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct AccountInfo {
     pub pub_key_hash: String,
-    pub nonce: u32,
+    pub nonce: u128,
 }
 
 /// The state of the contract, that is totally serialized on-chain
@@ -75,7 +75,7 @@ impl IdentityContractState {
         }
     }
 
-    pub fn get_nonce(&self, account: &str) -> Result<u32, &'static str> {
+    pub fn get_nonce(&self, account: &str) -> Result<u128, &'static str> {
         let info = self.identities.get(account).ok_or("Identity not found")?;
         Ok(info.nonce)
     }
