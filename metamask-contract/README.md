@@ -1,3 +1,5 @@
+🚧  This repo is WIP - None of the README are up-to-date 🚧
+
 # Metamask Identity risc0 example
 
 On Hylé, any smart contract can serve as proof of identity. This flexibility allows you to register your preferred identity source as a smart contract for account identification. Hylé also ships [a native `hydentity` contract](https://github.com/Hyle-org/hyle/tree/main/contracts/hydentity) for simplicity.

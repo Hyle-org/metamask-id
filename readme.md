@@ -1,3 +1,5 @@
+🚧  This repo is WIP - None of the README are up-to-date 🚧
+
 # Hyle Identity Registration Demo with MetaMask Snap
 
 This document provides instructions for running a demo of Hyle identity registration using a MetaMask Snap.

@@ -1,3 +1,5 @@
+🚧  This repo is WIP - None of the README are up-to-date 🚧
+
 # MetaMask Snap: Hylé Identity Registration
 
 ## Overview
