@@ -1,10 +1,14 @@
 [workspace]
 resolver = "2"
 members = ["host", "contract", "methods"]
+default-members = ["host", "contract"]
 
 [workspace.dependencies]
-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", branch = "metamask" } # don't forget to update methods/guest/Cargo.toml 
-client-sdk = { git = "https://github.com/hyle-org/hyle", package = "client-sdk", branch = "metamask", features = ["risc0", "rest"] }
+sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", tag = "v0.13.0-rc.1" } # don't forget to update methods/guest/Cargo.toml 
+client-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-client-sdk", tag = "v0.13.0-rc.1", features = [
+  "risc0",
+  "rest",
+] }
 
 # sdk = { path = "/home/bertrand/workspace/hyle2/crates/contract-sdk", package = "hyle-contract-sdk" } # don't forget to update methods/guest/Cargo.toml 
 # client-sdk = { path = "/home/bertrand/workspace/hyle2/crates/client-sdk", package="client-sdk", default-features = false, features = ["risc0", "rest"] }

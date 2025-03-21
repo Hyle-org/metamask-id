@@ -5,9 +5,9 @@ use contract_identity::IdentityContractState;
 use hex::decode;
 use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 use sdk::api::APIRegisterContract;
+use sdk::ContractInput;
 use sdk::TxHash;
-use sdk::{ContractInput, Digestable};
-use sdk::{Identity, ProofTransaction};
+use sdk::{HyleContract, Identity, ProofTransaction};
 use serde::Deserialize;
 use sha3::Digest;
 use sha3::Keccak256;
@@ -73,7 +73,7 @@ async fn main() {
             let register_tx = APIRegisterContract {
                 verifier: "risc0".into(),
                 program_id: sdk::ProgramId(sdk::to_u8_array(&GUEST_ID).to_vec()),
-                state_digest: initial_state.as_digest(),
+                state_commitment: initial_state.commit(),
                 contract_name: contract_name.clone().into(),
             };
             let res = client.register_contract(&register_tx).await.unwrap();
@@ -129,7 +129,7 @@ async fn prove(Json(request): Json<ProveRequest>) -> Json<TxHash> {
     let indexer = client_sdk::rest_client::IndexerApiHttpClient::new(cli.host).unwrap();
     let prover = Risc0Prover::new(GUEST_ELF);
 
-    let initial_state: IdentityContractState = client
+    let mut initial_state: IdentityContractState = client
         .get_contract(&request.contract_name.clone().into())
         .await
         .unwrap()
@@ -155,7 +155,7 @@ async fn prove(Json(request): Json<ProveRequest>) -> Json<TxHash> {
     println!("tx_hash {:?}", request.tx_hash.clone());
 
     let inputs = ContractInput {
-        initial_state: initial_state.as_digest(),
+        state: initial_state.as_bytes().unwrap(),
         identity: request.identity.clone().into(),
         tx_hash: request.tx_hash.clone().into(),
         private_input: vec![],
@@ -166,7 +166,7 @@ async fn prove(Json(request): Json<ProveRequest>) -> Json<TxHash> {
 
     println!("inputs {:?}", inputs.clone());
 
-    let res = contract_identity::execute(inputs.clone());
+    let res = initial_state.execute(&inputs.clone());
     if let Err(e) = res {
         println!("Error: {:?}", e);
     }

@@ -6,8 +6,13 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", features = ["risc0"], branch = "metamask" }
+sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", features = [
+  "risc0",
+], tag = "v0.13.0-rc.1" }
 # sdk = { path = "/home/bertrand/workspace/hyle2/crates/contract-sdk", features = ["risc0"], package = "hyle-contract-sdk" }
-contract-identity = { path = "../../contract", default-features = false}
+contract-identity = { path = "../../contract", default-features = false }
+
+# Later versions required more recent version of rust that risc0 toolchain
+bytemuck_derive = "=1.8.1"
 
 risc0-zkvm = { version = "1.2.2", default-features = false, features = ['std'] }

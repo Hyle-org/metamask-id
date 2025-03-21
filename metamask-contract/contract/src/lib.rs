@@ -2,7 +2,7 @@ use actions::IdentityAction;
 use borsh::{BorshDeserialize, BorshSerialize};
 use hex::{decode, encode};
 use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
-use sdk::{Digestable, RunResult};
+use sdk::{utils::parse_raw_contract_input, HyleContract, RunResult};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use sha3::Keccak256;
@@ -17,40 +17,39 @@ pub mod actions;
 
 extern crate alloc;
 
-/// Entry point of the contract's logic
-pub fn execute(contract_input: sdk::ContractInput) -> RunResult<IdentityContractState> {
-    // Parse contract inputs
-    let (input, action) = sdk::guest::init_raw::<IdentityAction>(contract_input);
+impl HyleContract for IdentityContractState {
+    /// Entry point of the contract's logic
+    fn execute(&mut self, input: &sdk::ContractInput) -> RunResult {
+        // Parse contract inputs
+        let (action, ctx) = parse_raw_contract_input::<IdentityAction>(input)?;
 
-    let action = action.ok_or("Failed to parse action")?;
-
-    // Parse initial state
-    let state: IdentityContractState = input
-        .initial_state
-        .clone()
-        .try_into()
-        .expect("failed to parse state");
-
-    let identity = input.identity;
-    let contract_name = &input
-        .blobs
-        .get(input.index.0)
-        .ok_or("No blob")?
-        .contract_name;
-
-    if input.index.0 == 0 {
-        // Identity blob should be at position 0
-        let blobs = input
+        let identity = input.identity.clone();
+        let contract_name = &input
             .blobs
-            .split_first()
-            .map(|(_, rest)| rest)
-            .ok_or("No blobs")?;
-        execute_action(state, action, contract_name, identity, blobs)
-    } else {
-        // Otherwise, it's less efficient as need to clone blobs & the remove is O(n)
-        let mut blobs = input.blobs.clone();
-        blobs.remove(input.index.0);
-        execute_action(state, action, contract_name, identity, &blobs)
+            .get(input.index.0)
+            .ok_or("No blob")?
+            .contract_name;
+
+        let program_output = if input.index.0 == 0 {
+            // Identity blob should be at position 0
+            let blobs = input
+                .blobs
+                .split_first()
+                .map(|(_, rest)| rest)
+                .ok_or("No blobs")?;
+            self.execute_action(action, contract_name, identity, blobs)?
+        } else {
+            // Otherwise, it's less efficient as need to clone blobs & the remove is O(n)
+            let mut blobs = input.blobs.clone();
+            blobs.remove(input.index.0);
+            self.execute_action(action, contract_name, identity, &blobs)?
+        };
+
+        Ok((program_output, ctx, vec![]))
+    }
+
+    fn commit(&self) -> sdk::StateCommitment {
+        sdk::StateCommitment(self.as_bytes().expect("Failed to encode state"))
     }
 }
 
@@ -81,45 +80,41 @@ impl IdentityContractState {
     }
 }
 
-pub fn execute_action(
-    mut state: IdentityContractState,
-    action: IdentityAction,
-    contract_name: &sdk::ContractName,
-    account: sdk::Identity,
-    blobs: &[sdk::Blob],
-) -> RunResult<IdentityContractState> {
-    if !account.0.ends_with(&contract_name.0) {
-        return Err(format!(
-            "Invalid account extension. '.{contract_name}' expected."
-        ));
-    }
-    let pub_key = account
-        .0
-        .trim_end_matches(&contract_name.0)
-        .trim_end_matches(".");
-
-    let program_output = match action {
-        IdentityAction::RegisterIdentity { signature } => {
-            state.register_identity(pub_key, &signature)
+impl IdentityContractState {
+    pub fn execute_action(
+        &mut self,
+        action: IdentityAction,
+        contract_name: &sdk::ContractName,
+        account: sdk::Identity,
+        blobs: &[sdk::Blob],
+    ) -> Result<String, String> {
+        if !account.0.ends_with(&contract_name.0) {
+            return Err(format!(
+                "Invalid account extension. '.{contract_name}' expected."
+            ));
         }
-        IdentityAction::VerifyIdentity { nonce, signature } => {
-            match state.verify_identity(pub_key, nonce, blobs, &signature) {
-                Ok(true) => Ok(format!("Identity verified for account: {}", account)),
-                Ok(false) => Err(format!(
-                    "Identity verification failed for account: {}",
-                    account
-                )),
-                Err(err) => Err(format!("Error verifying identity: {}", err)),
+        let pub_key = account
+            .0
+            .trim_end_matches(&contract_name.0)
+            .trim_end_matches(".");
+
+        match action {
+            IdentityAction::RegisterIdentity { signature } => {
+                self.register_identity(pub_key, &signature)
+            }
+            IdentityAction::VerifyIdentity { nonce, signature } => {
+                match self.verify_identity(pub_key, nonce, blobs, &signature) {
+                    Ok(true) => Ok(format!("Identity verified for account: {}", account)),
+                    Ok(false) => Err(format!(
+                        "Identity verification failed for account: {}",
+                        account
+                    )),
+                    Err(err) => Err(format!("Error verifying identity: {}", err)),
+                }
             }
         }
-    };
-    program_output.map(|output| (output, state, alloc::vec![]))
-}
+    }
 
-// The IdentityVerification trait is implemented for the IdentityContractState struct
-// This trait is given by the sdk, as a "standard" for identity verification contracts
-// but you could do the same logic without it.
-impl IdentityContractState {
     fn register_identity(&mut self, pub_key: &str, signature: &str) -> Result<String, String> {
         // Parse the signature
         let valid = k256_verifier(pub_key, signature, "hyle registration");
@@ -198,6 +193,10 @@ impl IdentityContractState {
             .cloned()
             .ok_or("Identity not found")
     }
+
+    pub fn as_bytes(&self) -> Result<Vec<u8>, borsh::io::Error> {
+        borsh::to_vec(self)
+    }
 }
 
 impl Default for IdentityContractState {
@@ -206,19 +205,13 @@ impl Default for IdentityContractState {
     }
 }
 
-/// Helpers to transform the contrat's state in its on-chain state digest version.
+/// Helpers to transform the contrat's state commitment in its full-state.
 /// In an optimal version, you would here only returns a hash of the state,
 /// while storing the full-state off-chain
-impl Digestable for IdentityContractState {
-    fn as_digest(&self) -> sdk::StateDigest {
-        sdk::StateDigest(borsh::to_vec(&self).expect("Failed to encode Balances"))
-    }
-}
-
-impl TryFrom<sdk::StateDigest> for IdentityContractState {
+impl TryFrom<sdk::StateCommitment> for IdentityContractState {
     type Error = anyhow::Error;
 
-    fn try_from(state: sdk::StateDigest) -> Result<Self, Self::Error> {
+    fn try_from(state: sdk::StateCommitment) -> Result<Self, Self::Error> {
         borsh::from_slice(&state.0)
             .map_err(|_| anyhow::anyhow!("Could not decode identity state".to_string()))
     }
