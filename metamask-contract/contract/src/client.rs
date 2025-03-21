@@ -1,30 +1,13 @@
-use std::any::Any;
-
 use client_sdk::{
-    helpers::{ClientSdkExecutor, ClientSdkProver},
+    helpers::ClientSdkProver,
     transaction_builder::{StateUpdater, TxExecutorBuilder},
 };
-use sdk::{utils::as_hyle_output, ContractName, Digestable, HyleOutput};
+use sdk::ContractName;
 
-use crate::{execute, IdentityContractState};
+use crate::IdentityContractState;
 
 pub mod metadata {
     pub const ELF: &[u8] = methods_identity::GUEST_ELF;
-}
-
-pub struct PseudoExecutor {}
-impl ClientSdkExecutor for PseudoExecutor {
-    fn execute(
-        &self,
-        contract_input: &sdk::ContractInput,
-    ) -> anyhow::Result<(Box<dyn Any>, HyleOutput)> {
-        let mut res = execute(contract_input.clone());
-        let output = as_hyle_output(contract_input.clone(), &mut res);
-        match res {
-            Ok(res) => Ok((Box::new(res.1.clone()), output)),
-            Err(e) => Err(anyhow::anyhow!(e)),
-        }
-    }
 }
 
 impl IdentityContractState {
@@ -33,12 +16,7 @@ impl IdentityContractState {
         contract_name: ContractName,
         builder: &mut TxExecutorBuilder<S>,
     ) {
-        builder.init_with(
-            contract_name,
-            self.as_digest(),
-            PseudoExecutor {},
-            NoProver {},
-        );
+        builder.init_with(contract_name, NoProver {});
     }
 }
 
