@@ -4,8 +4,8 @@ members = ["host", "contract", "methods"]
 default-members = ["host", "contract"]
 
 [workspace.dependencies]
-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", tag = "hmac.0.1.0" } # don't forget to update methods/guest/Cargo.toml 
-client-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-client-sdk", tag = "hmac.0.1.0", features = [
+sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", tag = "secp256k1.0.1.0" } # don't forget to update methods/guest/Cargo.toml 
+client-sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-client-sdk", tag = "secp256k1.0.1.0", features = [
   "risc0",
   "rest",
 ] }
