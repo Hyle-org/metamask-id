@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 sdk = { git = "https://github.com/hyle-org/hyle", package = "hyle-contract-sdk", features = [
   "risc0",
-], tag = "v0.13.0-rc.1" }
+], tag = "v0.13.0-rc.2" }
 # sdk = { path = "/home/bertrand/workspace/hyle2/crates/contract-sdk", features = ["risc0"], package = "hyle-contract-sdk" }
 contract-identity = { path = "../../contract", default-features = false }
 

@@ -590,8 +590,8 @@ dependencies = [
 
 [[package]]
 name = "hyle-contract-sdk"
-version = "0.13.0-rc.1"
-source = "git+https://github.com/hyle-org/hyle?tag=v0.13.0-rc.1#0bd510806f961ff13c0edbda57d6e2350cb706ad"
+version = "0.13.0-rc.2"
+source = "git+https://github.com/hyle-org/hyle?tag=v0.13.0-rc.2#d9c75952b91c2edaa60c402adc904c60c7adac7d"
 dependencies = [
  "borsh",
  "hyle-model",
@@ -601,8 +601,8 @@ dependencies = [
 
 [[package]]
 name = "hyle-model"
-version = "0.13.0-rc.1"
-source = "git+https://github.com/hyle-org/hyle?tag=v0.13.0-rc.1#0bd510806f961ff13c0edbda57d6e2350cb706ad"
+version = "0.13.0-rc.2"
+source = "git+https://github.com/hyle-org/hyle?tag=v0.13.0-rc.2#d9c75952b91c2edaa60c402adc904c60c7adac7d"
 dependencies = [
  "borsh",
  "hex",

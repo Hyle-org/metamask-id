@@ -22,7 +22,7 @@ client-sdk = { workspace = true, features = ["risc0"], optional = true }
 methods-identity = { path = "../methods", optional = true }
 
 [features]
-default = []
+default = ["client"]
 client = [
   "dep:client-sdk",
   "sdk/tracing",
